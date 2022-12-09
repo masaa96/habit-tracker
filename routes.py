@@ -14,15 +14,17 @@ def add_calc_date_range():
     return {"date_range": date_range}
 
 
-def today_at_midnight():
-    today = datetime.datetime.today()
-    return datetime.datetime(today.year, today.month, today.day)
+def at_midnight(date_obj):
+    return datetime.datetime(date_obj.year, date_obj.month, date_obj.day)
 
 
 @pages.route("/")
 def index():
     date_str = request.args.get("date")
-    selected_date = datetime.datetime.fromisoformat(date_str) if date_str else today_at_midnight()
+    if date_str:
+        selected_date = at_midnight(datetime.datetime.fromisoformat(date_str))
+    else:
+        selected_date = at_midnight(datetime.datetime.today())
 
     habits_on_date = current_app.db.habits.find({"added": {"$lte": selected_date}})
     completions = [
@@ -41,7 +43,7 @@ def index():
 
 @pages.route("/add", methods=["GET", "POST"])
 def add_habit():
-    today = today_at_midnight()
+    today = at_midnight(datetime.datetime.today())
     if request.method == "POST":
         current_app.db.habits.insert_one(
             {"_id": uuid.uuid4().hex, "added": today, "name": request.form.get("habit")}
@@ -58,7 +60,7 @@ def add_habit():
 def complete():
     date_str = request.form.get("date")
     habit = request.form.get("habitId")
-    date = datetime.datetime.fromisoformat(date_str)
+    date = at_midnight(datetime.datetime.fromisoformat(date_str))
     current_app.db.completions.insert_one({"date": date, "habit": habit})
 
     return redirect(url_for("habits.index", date=date_str))
