@@ -18,13 +18,18 @@ def at_midnight(date_obj):
     return datetime.datetime(date_obj.year, date_obj.month, date_obj.day)
 
 
-@pages.route("/")
-def index():
-    date_str = request.args.get("date")
+def get_selected_date(date_str):
     if date_str:
         selected_date = at_midnight(datetime.datetime.fromisoformat(date_str))
     else:
         selected_date = at_midnight(datetime.datetime.today())
+    return selected_date
+
+
+@pages.route("/")
+def index():
+    date_str = request.args.get("date")
+    selected_date = get_selected_date(date_str)
 
     habits_on_date = current_app.db.habits.find({"added": {"$lte": selected_date}})
     completions = [
@@ -43,16 +48,18 @@ def index():
 
 @pages.route("/add", methods=["GET", "POST"])
 def add_habit():
-    today = at_midnight(datetime.datetime.today())
+    date_str = request.args.get("date")
+    selected_date = get_selected_date(date_str)
+
     if request.method == "POST":
         current_app.db.habits.insert_one(
-            {"_id": uuid.uuid4().hex, "added": today, "name": request.form.get("habit")}
+            {"_id": uuid.uuid4().hex, "added": selected_date, "name": request.form.get("habit")}
         )
 
     return render_template(
         "add_habit.html",
         title="Habit Tracker - Add Habit",
-        selected_date=today
+        selected_date=selected_date
     )
 
 
@@ -62,5 +69,16 @@ def complete():
     habit = request.form.get("habitId")
     date = at_midnight(datetime.datetime.fromisoformat(date_str))
     current_app.db.completions.insert_one({"date": date, "habit": habit})
+
+    return redirect(url_for("habits.index", date=date_str))
+
+
+@pages.route("/delete", methods=["GET", "POST"])
+def delete_habit():
+    date_str = request.args.get("date")
+    habit_id = request.form.get("habitId")
+
+    if request.method == "POST":
+        current_app.db.habits.delete_many({"_id": habit_id})
 
     return redirect(url_for("habits.index", date=date_str))
