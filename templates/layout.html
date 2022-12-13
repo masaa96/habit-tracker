@@ -23,10 +23,10 @@
     <main class="main">
         <section class="dates">
             {% for date in date_range(selected_date) %}
-                {% if "add" not in request.endpoint %}
-                    {% set href_dates = url_for('habits.index', date=date) %}
-                {% else %}
+                {% if "add" in request.endpoint %}
                     {% set href_dates = url_for('habits.add_habit', date=date) %}
+                {% else %}
+                    {% set href_dates = url_for('habits.index', date=date) %}
                 {% endif %}
                 <a
                    class="dates__link {{ 'dates__link--current' if loop.index0 == 3 else '' }}"
